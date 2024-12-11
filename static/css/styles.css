@@ -1,0 +1,178 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Raleway', sans-serif;
+    background-color: #202020; /* Main background color*/
+}
+
+label[for="content"] {
+    font-size: 24px;
+    color: #ffffff;
+    display: block;
+    text-align: center;
+    font-family: 'Raleway', sans-serif;
+}
+
+h1 {
+    text-align: center;
+    color: #ffffff; /* Title font color */
+    background-color: #306289; /* Background color for top of page */
+    padding: 20px;
+    border-bottom: 3px solid #000000; 
+}
+
+.content {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #1e1e1e;
+    border: 2px solid #306289;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+
+
+form {
+    background-color: #ffffff22;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+form p {
+    margin: 10px 0;
+}
+
+label {
+    font-weight: bold;
+}
+
+input[type="text"], input[type="password"] {
+    width: 65%;
+    padding: 12px;
+    border: 2px solid #000000;
+    border-radius: 5px;
+    background-color: #d6d6d6; /* background for input */
+}
+
+button {
+    background-color: #306289; /* Send button color */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: #21567d; /* Send button hover color */
+}
+
+#chat-box {
+    width: 90%;
+    max-width: 100%;
+    height: 300px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #222;
+    overflow-y: auto;
+    line-height: 1.5;
+    text-align: left;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    scroll-behavior: smooth;
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    resize: none;
+    margin: 0;
+}
+
+.chat-container {
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Raleway', sans-serif;
+}
+
+#chat-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chat-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+
+.message {
+    padding: 5px 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+}
+
+.user-message {
+    background-color: #3e8e41;
+    color: white;
+    align-self: flex-end;
+}
+
+.other-message {
+    background-color: #007bff;
+    color: white;
+    align-self: flex-start;
+}
+
+.header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 20px;
+    background-color: #306289;
+    color: white;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.header h1 {
+    margin: 0;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+
+.login-button, .create-account-button {
+    text-decoration: none;
+    color: #ffffff;
+    margin-left: 20px;
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.login-button:hover,
+.create-account-button:hover {
+    text-decoration: underline;
+}
+
+#create-message {
+    margin-top: 10px;
+    font-weight: bold;
+    color:#21567d
+}
+
+#login-message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    color:#21567d
+}
+

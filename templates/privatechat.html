@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1-crypto-js.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/openpgp@4.10.10/dist/openpgp.min.js"></script>-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/privateMessagingStyles.css') }}">
+</head>
+<body>
+    <div class="contacts">
+        <h2>Contacts <button id="info">Home</button></h2>
+        <div class="buttons-container">
+            <button id="add-contact-button">Add Contact</button>
+            <button id="contact-requests-button">Requests</button>
+            <button id="create-group-button">Create Group</button>
+          </div>
+        <div id="contact-list"></div>
+        <div id="group-list"></div>
+    </div>
+
+    <div class="chat-area">
+        <h2>Chats</h2> 
+        <div id="chatbox"></div>
+        <form id="private-message-form">
+            <input type="text" id="private-message-input" placeholder="Type a private message..." required style="display: none;">
+            <button type="submit" id="send-button" style="display: none;">Send</button>
+            <button id="encrypt-send-button" style="display: none;" onclick="event.preventDefault();">Encrypt & Send</button>
+            <button id="group-send-button" style="display: none;" onclick="event.preventDefault();">Send</button>
+        </form>
+    </div>
+
+    <!-- Add Contact Modal -->
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add New Contact</h2>
+            <input type="text" id="new-contact-input" placeholder="Enter username..." required />
+            <button id="save-contact-button">Send Request</button>
+        </div>
+    </div>
+
+    <!-- Contact Requests Modal -->
+    <div id="contactRequestsModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Contact Requests</h2>
+            <ul id="contact-requests-list"></ul>
+        </div>
+    </div>
+
+    <!-- Group Modal -->
+    <div id="groupModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Create Group</h2>
+            <input type="text" id="group-member-input" placeholder="Enter username..." required />
+            <button id="add-member-button">Add Member</button>
+            <div id="member-list"></div>
+            <button id="finalize-button" style="display: none;">Finalize</button>
+        </div>
+    </div>
+
+    <!-- Encrypt Modal -->
+    <div id="encryptModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Encrypt Message</h2>
+            <input type="text" id="message-password" placeholder="Enter message password..." required />
+            <button id="encrypt-send-button">Send</button>
+            <div id="member-list"></div>
+            <button id="finalize-button" style="display: none;">Finalize</button>
+        </div>
+    </div>
+
+
+
+    <div id="message-area" class="message-area"></div>
+
+    <!-- Alert area -->
+    <div id="alert-area"></div>
+
+    <script>
+        const currentUser = sessionStorage.getItem('currentUser');
+        const socket = io("http://127.0.0.1:5000/");
+        
+        const chatbox = document.getElementById('chatbox');
+        const messageInput = document.getElementById('private-message-input');
+        const messageForm = document.getElementById('private-message-form');
+        const contactList = document.getElementById('contact-list');
+        const groupList = document.getElementById('group-list');
+        
+        const contactModal = document.getElementById('contactModal');
+        const contactRequestsModal = document.getElementById('contactRequestsModal');
+        
+        const addContactButton = document.getElementById('add-contact-button');
+        const createGroupButtonModal  = document.getElementById('create-group-button');
+        const createGroupButton = document.getElementById('finalize-button');
+        const contactRequestsButton = document.getElementById('contact-requests-button');
+        
+        
+        const groupModalClose = groupModal.querySelector('.close');
+        const encryptModal = document.getElementById('encryptModal');
+        const encryptModalClose = encryptModal.querySelector('.close');
+        const contactModalClose = contactModal.querySelector('.close');
+        const contactRequestsModalClose = contactRequestsModal.querySelector('.close');
+        
+document.getElementById('encrypt-send-button').addEventListener('click', async (event) => {
+    event.preventDefault();
+    const messageContent = messageInput.value.trim();
+    const selectedContact = contactList.querySelector('.selected-contact');
+    if (!selectedContact) {
+        showAlert('Please select a contact first!');
+        return;
+    }
+    const receiver = selectedContact.textContent;
+    if (messageContent) {
+        socket.emit('send_private_message', {
+            sender: currentUser,
+            receiver: receiver,
+            content: messageContent
+        });
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageInput.value = '';
+        }
+    });
+
+        function showModal(modal) {
+            modal.style.display = 'block';
+        }
+        
+        function closeModal(modal) {
+            modal.style.display = 'none';
+        }
+        
+        function showAlert(message) {
+            const alertArea = document.getElementById('alert-area');
+            const alertDiv = document.createElement('div');
+            alertDiv.classList.add('alert');
+            alertDiv.textContent = message;
+            alertArea.appendChild(alertDiv);
+            alertDiv.style.display = 'block';
+
+            // Hide alert after 3 seconds
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        addContactButton.addEventListener('click', () => {
+            showModal(contactModal);
+        });
+
+        contactRequestsButton.addEventListener('click', () => {
+            showModal(contactRequestsModal);
+            socket.emit('get_contact_requests', currentUser);
+        });
+
+        createGroupButtonModal.addEventListener('click', () => {
+            showModal(groupModal);
+        });
+
+        groupModalClose.addEventListener('click', () => {
+            closeModal(groupModal);
+        });    
+        
+        encryptModalClose.addEventListener('click', () => {
+            closeModal(encryptModal);
+        }); 
+
+        contactModalClose.addEventListener('click', () => {
+            closeModal(contactModal);
+        });
+        
+        contactRequestsModalClose.addEventListener('click', () => {
+            closeModal(contactRequestsModal);
+        });
+        
+        window.addEventListener('click', (event) => {
+            if (event.target === contactModal) {
+                closeModal(contactModal);
+            }
+            if (event.target === contactRequestsModal) {
+                closeModal(contactRequestsModal);
+            }
+            if (event.target === groupModal) {
+                closeModal(groupModal);
+            }
+            if (event.target === encryptModal) {
+                closeModal(encryptModal);
+            }
+        });
+        
+        contactList.addEventListener('click', (event) => {
+            if (event.target.classList.contains('contact')) {
+                document.getElementById('group-send-button').style.display = 'none';
+                document.getElementById('encrypt-send-button').style.display = 'none'
+                document.getElementById('send-button').style.display = 'inline-block';
+                document.getElementById("private-message-input").style.display = "inline-block";
+                const contactName = event.target.textContent;
+                const h2Element = document.querySelector('.chat-area h2');
+                h2Element.innerHTML = `${contactName}`;
+                const homeButton = document.getElementById('info')
+                    homeButton.addEventListener('click', () => {
+                        window.location.href = '/';
+                    });
+                chatbox.innerHTML = '';
+                socket.emit('get_messages', contactName, currentUser);
+                document.querySelectorAll('.contact').forEach(contact => {
+                    contact.classList.remove('selected-contact');
+                });
+                event.target.classList.add('selected-contact');
+                socket.emit('live_messages', contactName, currentUser);
+            }
+        });
+
+        socket.on('receive_messages', (data) => {
+            // Avoid clearing the chatbox unnecessarily
+            data.messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                
+                const timestamp = message.timestamp ? new Date(message.timestamp) : new Date();
+                const time = timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const fullDate = timestamp.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                
+                const timestampSpan = document.createElement('span');
+                timestampSpan.textContent = time + ' ';
+                timestampSpan.title = fullDate;
+                messageDiv.appendChild(timestampSpan);
+                
+                const senderSpan = document.createElement('strong');
+                senderSpan.textContent = message.sender + ': ';
+                messageDiv.appendChild(senderSpan);
+                
+                const contentSpan = document.createElement('span');
+                contentSpan.textContent = message.content;
+                messageDiv.appendChild(contentSpan);
+                
+                chatbox.appendChild(messageDiv);
+            });
+            
+            // Scroll to the bottom to display the latest message
+            chatbox.scrollTop = chatbox.scrollHeight;
+        });
+
+        socket.on('receive_group_messages', (data) => {
+            data.forEach(message => {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                
+                const timestamp = message.timestamp ? new Date(message.timestamp) : new Date();
+                const time = timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const fullDate = timestamp.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                
+                const timestampSpan = document.createElement('span');
+                timestampSpan.textContent = time + ' ';
+                timestampSpan.title = fullDate;
+                messageDiv.appendChild(timestampSpan);
+                
+                const senderSpan = document.createElement('strong');
+                senderSpan.textContent = message.sender + ': ';
+                messageDiv.appendChild(senderSpan);
+                
+                const contentSpan = document.createElement('span');
+                contentSpan.textContent = message.content;
+                messageDiv.appendChild(contentSpan);
+                
+                chatbox.appendChild(messageDiv);
+            });
+            
+            // Scroll to the bottom to display the latest message
+            chatbox.scrollTop = chatbox.scrollHeight;
+        });
+        
+        messageForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const messageContent = messageInput.value.trim();
+            const selectedContact = contactList.querySelector('.selected-contact');
+            if (!selectedContact) {
+                showAlert('Please select a contact first!');
+                return;
+            }
+            const receiver = selectedContact.textContent;
+            if (messageContent) {
+                socket.emit('send_private_message', {
+                    sender: currentUser,
+                    receiver: receiver,
+                    content: messageContent
+                });
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageInput.value = '';
+            }
+        });
+
+        document.getElementById('group-send-button').addEventListener('click', (event) => {
+            const messageContent = messageInput.value.trim();
+            const selectedGroup = groupList.querySelector('.selected-group');
+            const groupArray = selectedGroup.textContent.split(',').map(item => item.trim());
+            if (messageContent) {
+                const groupMessageData = {
+                    sender: currentUser,
+                    content: messageContent
+                };
+        
+                
+                for (let i = 0; i < groupArray.length; i++) {
+                    groupMessageData[`user${i + 1}`] = groupArray[i].trim();
+                }
+                socket.emit('send_group_message', groupMessageData);
+                const messageDiv = document.createElement('div');
+                
+                messageInput.value = '';
+            }
+            chatbox.innerHTML = ''
+            socket.emit('get_group_messages', groupArray)
+        });
+        
+        socket.on('receive_message', (message_data) => {
+            // Ensure the message is relevant to the current user
+            if (message_data.receiver === currentUser || message_data.sender === currentUser) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+        
+                // Format the timestamp if present
+                const timestamp = message_data.timestamp ? new Date(message_data.timestamp) : new Date();
+                const time = timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const fullDate = timestamp.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+                const timestampSpan = document.createElement('span');
+                timestampSpan.textContent = time + ' ';
+                timestampSpan.title = fullDate;
+                messageDiv.appendChild(timestampSpan);
+        
+                const senderSpan = document.createElement('strong');
+                senderSpan.textContent = message_data.sender + ': ';
+                messageDiv.appendChild(senderSpan);
+        
+                const contentSpan = document.createElement('span');
+                contentSpan.textContent = message_data.content;
+                messageDiv.appendChild(contentSpan);
+        
+                // Append the message to the chatbox
+                chatbox.appendChild(messageDiv);
+        
+                // Scroll the chatbox to the bottom after adding the new message
+                chatbox.scrollTop = chatbox.scrollHeight;
+            }
+        });
+        
+        // Example: Emitting the live_messages event to start the polling
+        //function startPolling(sender, receiver) {
+        //    socket.emit('live_messages', { sender: sender, receiver: receiver });
+        //}
+        
+        socket.emit('get_contacts', currentUser);
+        socket.on('receive_contacts', (data) => {
+            contactList.innerHTML = '';
+        
+            if (data.contacts && data.contacts.length > 0) {
+                // Loop through each contact
+                data.contacts.forEach(contact => {
+                    const contactExists = Array.from(contactList.children).some(child => child.textContent === contact);
+        
+                    // If the contact isn't already displayed, create a new contact div
+                    if (!contactExists) {
+                        const contactDiv = document.createElement('div');
+                        contactDiv.classList.add('contact');
+                        contactDiv.textContent = contact;
+                        const textArea1 = document.createElement('div');
+                        textArea1.classList.add('text-area-1');
+                        textArea1.textContent = "";
+                        contactDiv.appendChild(textArea1);
+                        
+                        contactList.appendChild(contactDiv);
+                    }
+                });
+            } else {
+                contactList.innerHTML = 'No contacts available.';
+            }
+        });
+        socket.emit('get_groups', currentUser);
+        socket.on('receive_groups', (data) => {
+            console.log('Received groups:', data);
+            groupList.innerHTML = '';  // Clear the current group list
+        
+            if (data.groups && data.groups.length > 0) {
+                // Loop through each group
+                data.groups.forEach(group => {
+                    // Check if the group is already in the group list by comparing group names
+                    const groupExists = Array.from(groupList.children).some(child => child.textContent === group);
+                    // If the group isn't already displayed, create a new group div
+                    if (!groupExists) {
+                        const groupDiv = document.createElement('div');
+                        groupDiv.classList.add('group');
+                        groupDiv.textContent = group;
+                        groupDiv.addEventListener('click', (event) => {
+                            if (event.target.classList.contains('group')) {
+                            document.getElementById('group-send-button').style.display = 'inline-block';
+                            document.getElementById('send-button').style.display = 'none';
+                            document.getElementById('encrypt-send-button').style.display = 'none';
+                            document.getElementById("private-message-input").style.display = "inline-block";
+                            const h2Element = document.querySelector('.chat-area h2');
+                            const groupName = event.target.textContent;
+                            h2Element.innerHTML = `${group}`;
+                            const homeButton = document.getElementById('info')
+                                homeButton.addEventListener('click', () => {
+                                    window.location.href = '/';
+                                });
+                            chatbox.innerHTML = '';
+                            
+                            const text = event.target.textContent;
+                            const contactsArray = text.split(',');
+                            //console.log(contactsArray);
+                            socket.emit('get_group_messages', contactsArray);
+                            document.querySelectorAll('.group').forEach(group => {
+                                group.classList.remove('selected-group');
+                            });
+                            event.target.classList.add('selected-group');
+
+                            }
+                            
+                        });
+                        groupList.appendChild(groupDiv);
+                    }
+                });
+            } else {
+                groupList.innerHTML = 'No groups available.';  // Display a message if no groups are found
+            }
+        });
+
+        const homeButton = document.getElementById('info')
+        const saveContactButton = document.getElementById('save-contact-button');
+
+        homeButton.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+
+        saveContactButton.addEventListener('click', () => {
+            const contactUsername = document.getElementById('new-contact-input').value.trim();
+            if (contactUsername) {
+                socket.emit('add_contact', contactUsername, currentUser);
+            } else {
+                showAlert('Please enter a contact username.');
+            }
+        });
+    
+        socket.on('receive_add_contact', (data) => {
+            if (data.success) {
+                showAlert('Contact request sent successfully!');
+                closeModal(contactModal);
+            } else {
+                showAlert(data.message);
+            }
+        });
+    
+        socket.on('receive_contact_requests', (data) => {
+            const requestsList = document.getElementById('contact-requests-list');
+            requestsList.innerHTML = '';
+            console.log('Received contact requests:', data.requests); 
+            if (data.requests.length === 0) {
+                const noRequestsMessage = document.createElement('li');
+                noRequestsMessage.textContent = 'No contact requests available.';
+                noRequestsMessage.classList.add('no-requests-message');
+                requestsList.appendChild(noRequestsMessage);
+            } else {
+                // loop through each request and append it to the list
+                data.requests.forEach(request => {
+                    const requestItem = document.createElement('li');
+                    requestItem.textContent = `${request.requester}`;
+                    const acceptButton = document.createElement('button');
+                    acceptButton.textContent = 'Accept';
+                    acceptButton.classList.add('accept-btn');
+                    acceptButton.addEventListener('click', () => {
+                        handleContactRequestResponse(request.requester, 'accept', requestItem);
+                    });
+
+                    const rejectButton = document.createElement('button');
+                    rejectButton.textContent = 'Reject';
+                    rejectButton.classList.add('reject-btn');
+                    rejectButton.addEventListener('click', () => {
+                        handleContactRequestResponse(request.requester, 'reject', requestItem);
+                    });
+                    requestItem.appendChild(acceptButton);
+                    requestItem.appendChild(rejectButton);
+                    requestsList.appendChild(requestItem);
+                });
+            }
+        });
+    
+        function handleContactRequestResponse(requester, response, requestItem) {
+            socket.emit('respond_contact_request', {
+                requester: requester,
+                requested: currentUser,
+                response: response
+            });
+            // After response remove the request from the list in the modal
+            requestItem.remove();
+        }
+        document.getElementById('add-member-button').addEventListener('click', function() {
+            var memberName = document.getElementById('group-member-input').value.trim();
+            if (memberName) {
+                socket.emit('add_user_to_group', memberName, currentUser)
+                
+            } else {
+                showAlert("Please enter a member name.");
+            }
+        });
+
+        document.getElementById('finalize-button').addEventListener('click', function() {
+            var memberListContainer = document.getElementById('member-list');
+            var memberNamesArray = Array.from(memberListContainer.children).map(memberItem => memberItem.textContent.trim());
+            console.log(memberNamesArray);
+        
+            socket.emit('create_group', memberNamesArray, currentUser);
+        });
+        
+
+        socket.on('receive_add_user_to_group', (data) => {
+            if (data.success) {
+                var memberName = document.getElementById('group-member-input').value.trim();
+                var memberListContainer = document.getElementById('member-list');
+                var existingMember = Array.from(memberListContainer.children).some(memberItem => 
+                    memberItem.textContent === memberName
+                );
+        
+                if (existingMember) {
+                    showAlert("This member is already added!");
+                } else {
+                    var memberItem = document.createElement('div');
+                    memberItem.classList.add('member');
+                    memberItem.textContent = memberName;
+        
+                    memberListContainer.appendChild(memberItem);
+                    document.getElementById('group-member-input').value = '';
+                    if (memberListContainer.children.length >= 2) {
+                        document.getElementById('finalize-button').style.display = 'block';
+                    }
+                }
+            } else {
+                showAlert(data.message);
+            }
+        });
+        socket.on('group_created', (data) => {
+            showAlert(data.message);
+            closeModal(groupModal);
+        });
+        document.querySelector('.close').addEventListener('click', function() {
+            document.getElementById('groupModal').style.display = 'none';
+        });
+    </script>
+    
+</body>
+</html>

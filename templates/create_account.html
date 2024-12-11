@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script>
+    <script>
+        var socket = io.connect('http://127.0.0.1:5000');
+
+        socket.on('connect', function() {
+            console.log('Connected to SocketIO');
+        });
+
+        socket.on('receive_create', function(response) {
+            console.log(response);
+            const createMessage = document.getElementById('create-message');
+            createMessage.textContent = response.message;
+        });
+
+        async function generateRSAKeys() {
+            // Generate a fresh RSA key pair
+            const keyPair = await window.crypto.subtle.generateKey(
+                {
+                    name: "RSA-OAEP",
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+                    hash: "SHA-256"
+                },
+                true,  // whether the key is extractable
+                ["encrypt", "decrypt"]
+            );
+            
+            console.log("Generated RSA Key Pair:", keyPair);  // Log the whole keyPair object
+
+            const publicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+            const privateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+
+            // Convert ArrayBuffer to Base64 for easy handling
+            const publicKeyBase64 = arrayBufferToBase64(publicKey);
+            const privateKeyBase64 = arrayBufferToBase64(privateKey);
+
+            // Log the generated keys for debugging
+            console.log("Generated Public Key:", publicKeyBase64);
+            console.log("Generated Private Key:", privateKeyBase64);
+
+            return { publicKeyBase64, privateKeyBase64 };
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const length = bytes.byteLength;
+            for (let i = 0; i < length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary)
+        }
+
+        // Handle account creation on form submission
+        async function createUser(event) {
+            event.preventDefault(); 
+
+            const usernameInput = document.querySelector('input[name="username"]');
+            const passwordInput = document.querySelector('input[name="password"]');
+            const createMessage = document.getElementById('create-message');
+            createMessage.textContent = '';  // Clear previous messages
+
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            // Validate username and password
+            const usernameRegex = /^[a-zA-Z0-9]{3,}$/;
+            if (!usernameRegex.test(username)) {
+                createMessage.textContent = "Username must be at least 3 characters long and contain only letters and numbers.";
+                createMessage.style.color = 'red';
+                return;
+            }
+            if (password.length < 8) {
+                createMessage.textContent = "Password must be at least 8 characters long.";
+                createMessage.style.color = 'red';
+                return;
+            }
+
+            // Generate RSA keys
+            const { publicKeyBase64, privateKeyBase64 } = await generateRSAKeys();
+
+            const credentials = { username, password, publicKey: publicKeyBase64, privateKey: privateKeyBase64 };
+
+            socket.emit('create', credentials);
+
+            usernameInput.value = ''; 
+            passwordInput.value = ''; 
+        }
+    </script>
+</head>
+<body>
+    <h1>nCryp Chat</h1>
+    <div class="content">
+        <form onsubmit="createUser(event)">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Username" class="textbox" required>
+            <br>
+            <label for="password">Password</label> 
+            <input type="password" id="password" name="password" placeholder="Password" class="textbox" required>
+            <br>
+            <button type="submit">Create Account</button>
+            
+            <button onclick="window.location.href='{{ url_for('index') }}'" class="nav-button">Go back</button>
+        </form>
+    
+        <div id="create-message"></div>
+    </div>
+</body>
+</html>

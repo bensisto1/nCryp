@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script>
+    <script>
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        var socket = io.connect('http://127.0.0.1:5000');
+    
+        socket.on('connect', function() {
+            console.log('Connected to SocketIO');
+        });
+    
+        socket.on('receive_login', function(response) {
+            const loginMessage = document.getElementById('login-message');
+            loginMessage.textContent = response.message;
+
+            if (response.success) {
+                setTimeout(function() {
+                    window.location.href = "{{ url_for('index') }}";
+                }, 1000);
+            } else {
+                // error message
+                loginMessage.style.color = 'red'; // red text color for error
+            }
+        });
+    
+        socket.on('update_session', function(data) {
+            const loginMessage = document.getElementById('login-message');
+            loginMessage.textContent = 'Logged in as: ' + data.username;
+            sessionStorage.setItem('currentUser', data.username);
+            
+            // Delay before redirect
+            setTimeout(() => {
+                window.location.href = "{{ url_for('index') }}";
+            }, 1000);
+        });
+    
+        window.loginUser = function(event) {
+            event.preventDefault();
+            const usernameInput = document.querySelector('input[name="username"]');
+            const passwordInput = document.querySelector('input[name="password"]');
+            
+            if (!usernameInput.value || !passwordInput.value) {
+                const loginMessage = document.getElementById('login-message');
+                loginMessage.textContent = 'Username and password cannot be empty.';
+                loginMessage.style.color = 'red';
+                return;
+            }
+            
+            const credentials = {
+                username: usernameInput.value,
+                password: passwordInput.value
+            };
+            
+            socket.emit('login', credentials);
+            usernameInput.value = '';
+            passwordInput.value = '';
+        };
+    });
+</script>
+</head>
+<body>
+    <h1>nCryp Chat v0.0</h1>
+    <div class="content">
+        <form onsubmit="loginUser(event)">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Username" class="textbox" required>
+            <br>
+            <label for="password">Password</label> 
+            <input type="password" id="password" name="password" placeholder="Password" class="textbox" required>
+            <br>
+            <button type="submit">Login</button>
+            <button class="nav-button" onclick="window.location.href='{{ url_for('index') }}'">Go back</button>
+        </form>
+        <div id="login-message"></div>
+        
+    </div>
+</body>
+</html>

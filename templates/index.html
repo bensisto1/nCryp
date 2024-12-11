@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const currentUser = sessionStorage.getItem('currentUser');
+            const userSection = document.getElementById('user-section');
+
+            if (currentUser) {
+                userSection.innerHTML = `<p>Logged in as: <strong>${currentUser}</strong></p>
+                                         <button id="logout-button" class="logout-button" onclick="logoutFunction()">Logout</button>`;
+            } else {
+                document.querySelector('.nav-button').style.display = 'none';
+                document.querySelector('button[type="submit"]').style.display = 'none';
+                document.querySelector('p[style="display: flex; align-items: center; gap: 10px;"]').style.display = 'none';
+
+
+                
+                userSection.innerHTML = `<p>You are not logged in.</p>
+                                         <button class="login-button" onclick="window.location.href='{{ url_for('login') }}'">Login</button>
+                                         <button class="create-account-button" onclick="window.location.href='{{ url_for('create_account') }}'">Create Account</button>`;
+            }
+
+            document.getElementById('logout-button')?.addEventListener('click', function(event) {
+                event.preventDefault();
+                fetch("{{ url_for('logout') }}", { method: "POST" })
+                    .then(response => {
+                        if (response.ok) {
+                            sessionStorage.removeItem('currentUser');
+                            window.location.href = "{{ url_for('index') }}";
+                        }
+                    });
+            });
+
+            var socket = io.connect('http://127.0.0.1:5000');
+
+            socket.on('connect', function() {
+                console.log('Connected to SocketIO');
+            });
+
+            socket.on('receive_message', function(msg) {
+                console.log(msg);
+                const chatContainer = document.getElementById('chat-container');
+                
+                // Create a new div for the incoming message
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.textContent = msg;
+                
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+
+            socket.on('update_session', function(data) {
+                const loginMessage = document.getElementById('login-message');
+                loginMessage.textContent = 'Logged in as: ' + data.username;
+                sessionStorage.setItem('currentUser', data.username);
+
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('index') }}";
+                }, 1000);
+            });
+
+            function sendMessage(event) {
+                event.preventDefault();
+                const messageInput = document.querySelector('input[name="content"]');
+                const currentUser = sessionStorage.getItem('currentUser');
+                const message = `${currentUser}: ${messageInput.value}`;
+                socket.emit('send_message', message);
+                messageInput.value = '';
+            }
+
+            
+
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        
+            document.querySelector('form').onsubmit = sendMessage;
+        });
+    </script>
+</head>
+<body>
+    <header class="header">
+        <h1>nCryp Chat</h1>
+        <div id="user-section"></div>
+    </header>
+    <div class="content">
+        <form>
+            <p>
+                <b><label for="content">Global Chat</label></b>
+                <div id="chat-container" class="chat-container" style="overflow-y: auto; height: 300px;">
+                    {% for message in messages %}
+                        <div class="message">{{ message['content'] }}</div>
+                    {% endfor %}
+                </div>
+            </p>
+            <p style="display: flex; align-items: center; gap: 10px;">
+                <input type="text" name="content" placeholder="Type a message here..." required>
+                <button type="submit">Send</button>
+            </p>
+            <button onclick="window.location.href='{{ url_for('privatechat') }}'" class="nav-button">Private Messaging</button>
+        </form>
+    </div>
+</body>
+</html>
